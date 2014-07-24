@@ -1,0 +1,101 @@
+#! /bin/sh
+# chkconfig: 345 55 45
+# description:i Custom memcache init script - Spawns multiple  memcache instances
+# processname: memcached_drupal
+# config: /etc/sysconfig/memcache_drupal
+
+# Source function library.
+. /etc/init.d/functions
+. /etc/sysconfig/memcache_drupal
+#	USER=memcached
+#	MAXCONN=1024
+#	CACHESIZE=64
+#	LOGGING=FALSE
+#	OPTIONS=""
+#	LOGPATH="/var/log/memcache_"
+
+# Check that networking is up.
+. /etc/sysconfig/network
+
+if [ "$NETWORKING" = "no" ]
+then
+	exit 0
+fi
+
+RETVAL=0
+prog="memcached"
+
+start () {
+        logger -t "DRUPAL MEMCACHE: " "Starting Memcache Instances"
+	# Ensure that /var/run/memcached has proper permissions
+	if [ "`stat -c %U /var/run/memcached`" != "$USER" ]; then
+		chown $USER /var/run/memcached
+	fi
+        if [ $LOGGING = TRUE ]; then
+	  daemon memcached -d -p 11211 -u $USER  -m 256 -c $MAXCONN  $OPTIONS >> ${LOGPATH}default.log  2>&1
+	  daemon memcached -d -p 11212 -u $USER  -m 512 -c $MAXCONN  $OPTIONS >> ${LOGPATH}form.log  2>&1
+	  daemon memcached -d -p 11213 -u $USER  -m 128 -c $MAXCONN  $OPTIONS >> ${LOGPATH}semaphore.log  2>&1
+	  daemon memcached -d -p 11214 -u $USER  -m 512 -c $MAXCONN  $OPTIONS >> ${LOGPATH}page.log 2>&1
+        else
+	  daemon memcached -d -p 11211 -u $USER  -m 256 -c $MAXCONN  $OPTIONS  2>&1
+	  daemon memcached -d -p 11212 -u $USER  -m 512 -c $MAXCONN  $OPTIONS  2>&1
+	  daemon memcached -d -p 11213 -u $USER  -m 128 -c $MAXCONN  $OPTIONS  2>&1
+	  daemon memcached -d -p 11214 -u $USER  -m 512 -c $MAXCONN  $OPTIONS  2>&1
+        fi
+        RETVAL=$?
+        [ $RETVAL -eq 0 ] 
+        return $RETVAL
+}
+stop () {
+	logger -t "DRUPAL MEMCACHE: " "Killing Drupal Memcache Instances"
+	killall memcached
+        RETVAL=$?
+        [ $RETVAL -eq 0 ] 
+        return $RETVAL
+}
+
+restart () {
+        logger -t "DRUPAL MEMCACHE: " "Restarting Drupal Memcache Instances"
+        stop
+        start
+}
+
+
+# See how we were called.
+case "$1" in
+  start)
+	start
+        if [[ $RETVAL -eq 0 ]]; then
+          echo_success 
+        else
+          echo_failure
+        fi
+          echo 'Drupal Memcache Start: '
+	;;
+  status)
+       PROCCOUNT=$(ps aux | egrep  -e '1121[1|2|3|3|4]' | grep -c memcache)
+       if [ $PROCCOUNT = 4 ]; then
+         RETVAL=1 
+         echo_success 
+         echo 'Drupal Memcache Status: '
+       else
+         echo_failure
+         echo 'Drupal Memcache Status: '
+         RETVAL=0
+       fi
+        ;;
+  stop)
+	stop
+        echo_success 
+        echo 'Drupal Memcache Stop: '
+	;;
+  restart|reload|force-reload)
+	restart
+	;;
+  *)
+	echo $"Usage: $0 {start|stop|restart}"
+	RETVAL=2
+        ;;
+esac
+
+exit $RETVAL

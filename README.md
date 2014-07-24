@@ -10,14 +10,15 @@ John Allspaw was the data operations manager for Flickr. He provides some intere
 We can apply this approach in how we use Memcached, by splitting up our caches and assigning them different memory sizes, enable logging per cache to help debug problems and potentially offloading them on to their own boxes. This will provide horizontal scaling to our architecture. Instead of putting in another web head to your cluster, you can deploy a dedicated memcache box and it will require less resources than an additional web server and cost a lot less.
 Sounds fun, let’s do it! … erm … now what?
 
-Here’s what we want to do.
+Here’s what we want to do
+=========================
 
-Create a memcached instance for each drupal cache
-Allocate different memory allotments for each one
-Teach Drupal that memcached is running in multiple places
-Provide a simple setup using a config file
-Add logging to Memcache
-Identify ways to see what memcache is doing
+* Create a memcached instance for each drupal cache
+* Allocate different memory allotments for each one
+* Teach Drupal that memcached is running in multiple places
+* Provide a simple setup using a config file
+* Add logging to Memcache
+* Identify ways to see what memcache is doing
 
 Lets start by looking at how memcache is started. You can manage it through a service using:
 
@@ -48,9 +49,9 @@ daemon memcached -d -p 11214 -u $USER  -m 512 -c $MAXCONN  $OPTIONS  2>&1
 
 This will spawn memcached a number of times and listen on different ports (11211-11215) using different memory allocations for each instance. We can now assign drupal to assign each instance to use a different cache. In our settings.php we can do this using the following snippet.
 
-/**
+\/**
  * Memcached configuration
- */
+\ */
 $conf['cache_backends'][] = 'modules/memcache/memcache.inc';
 $conf['memcache_key_prefix'] = 'drupal';
 $conf['memcache_persistent'] = TRUE;
